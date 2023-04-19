@@ -6,6 +6,11 @@ interface Movie {
   variation: number;
 }
 
+interface MovieFeed {
+  feed: {
+    top10: Movie[];
+  };
+}
 interface OpenAIResponse {
   choices: {
     text: string;
@@ -19,8 +24,8 @@ interface OpenAIResponse {
 
 async function fetchBoxOfficeData(): Promise<Movie[]> {
   const response = await fetch("https://api.allocine.fr/alqapibrest2/promo");
-  const data = await response.json();
-  return data.feed.top10 as Movie[];
+  const data = (await response.json()) as MovieFeed;
+  return data.feed.top10;
 }
 
 async function generateTweet(movie: Movie, apiKey: string): Promise<string> {
@@ -49,8 +54,7 @@ async function generateTweet(movie: Movie, apiKey: string): Promise<string> {
 async function postBoxOfficeTweet() {
   const movies = await fetchBoxOfficeData();
   const movie = movies[Math.floor(Math.random() * movies.length)];
-  const openaiApiKey = process.env.OPENAI_API_KEY;
-  const tweet = await generateTweet(movie, openaiApiKey);
+  const tweet = await generateTweet(movie, process.env.OPENAI_API_KEY!);
   const twitterClient = new Twitter({
     consumer_key: process.env.TWITTER_CONSUMER_KEY!,
     consumer_secret: process.env.TWITTER_CONSUMER_SECRET!,
