@@ -388,3 +388,52 @@ Here's an example of how you can modify the tsconfig.json file:
 
 The "outDir" option specifies the output directory
 for compiled JavaScript files. In this case, it is set to "dist".
+
+> This broke the build:
+>
+> ```plain
+> > my-twitter-chatbot@1.0.0 build
+> > tsc
+>
+> node_modules/@types/node/globals.d.ts:72:13 - error TS2403: Subsequent variable declarations must have the same type.  Variable 'AbortSignal' must be of type '{ new (): AbortSignal; prototype: AbortSignal; abort(reason?: any): AbortSignal; timeout(milliseconds: number): AbortSignal; }', but here has type '{ new (): AbortSignal; prototype: AbortSignal; }'.
+>
+> 72 declare var AbortSignal: {
+>                ~~~~~~~~~~~
+>
+>   node_modules/typescript/lib/lib.dom.d.ts:2071:13
+>     2071 declare var AbortSignal: {
+>                      ~~~~~~~~~~~
+>     'AbortSignal' was also declared here.
+>
+>
+> Found 1 error in node_modules/@types/node/globals.d.ts:72
+> ```
+>
+> Please fix the typescript config.
+
+It looks like there's a type declaration conflict in the `@types/node` package.
+You can try to fix this by updating the "typeRoots" and "types" options
+in your `tsconfig.json` file like this:
+
+```json
+{
+  "compilerOptions": {
+    "target": "es6",
+    "module": "commonjs",
+    "outDir": "dist",
+    "strict": true,
+    "esModuleInterop": true,
+    "typeRoots": ["node_modules/@types"],
+    "types": ["node", "jest"]
+  },
+  "exclude": ["node_modules", "**/*.test.ts"]
+}
+```
+
+Here, we set the "typeRoots" option to point only to the @types directory
+in node_modules, and we set the "types" option to only
+include the node and jest packages.
+This should prevent the conflict between the type declarations.
+
+Try running the build script again after making these changes and
+let me know if you encounter any further issues.
