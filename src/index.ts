@@ -1,21 +1,18 @@
-import dotenv from "dotenv";
 import fetch from "node-fetch";
 import Twitter from "twitter-lite";
 
-dotenv.config();
-
 interface Movie {
   title: string;
-  variation: string;
+  variation: number;
 }
 
 async function postBoxOfficeTweet() {
   // Fetch live box office admission data from an API
   const response = await fetch("https://api.allocine.fr/alqapibrest2/promo");
-  const data = await response.json();
+  const data = (await response.json()) as { feed: { top10: Movie[] } };
 
   // Choose a random movie from the top 10 movies
-  const movies = data.feed.top10 as Movie[];
+  const movies = data.feed.top10;
   const movie = movies[Math.floor(Math.random() * movies.length)];
 
   // Generate a tweet using OpenAI API
@@ -38,7 +35,9 @@ async function postBoxOfficeTweet() {
       }),
     }
   );
-  const { choices } = await responseOpenAI.json();
+  const { choices } = (await responseOpenAI.json()) as {
+    choices: { text: string }[];
+  };
   const tweet = choices[0].text.trim();
 
   // Post the tweet to Twitter
