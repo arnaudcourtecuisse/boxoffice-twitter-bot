@@ -366,3 +366,25 @@ async function postBoxOfficeTweet() {
   await twitterClient.post("statuses/update", { status: tweet });
 }
 ```
+
+> ❔ Can you update the typescript config so that
+> the output goes in the `dist` directory?
+
+Sure! You can update the tsconfig.json file to specify the output directory.
+Here's an example of how you can modify the tsconfig.json file:
+
+```json
+{
+  "compilerOptions": {
+    "target": "es6",
+    "module": "commonjs",
+    "outDir": "dist",
+    "strict": true,
+    "esModuleInterop": true
+  },
+  "exclude": ["node_modules", "**/*.test.ts"]
+}
+```
+
+The "outDir" option specifies the output directory
+for compiled JavaScript files. In this case, it is set to "dist".
