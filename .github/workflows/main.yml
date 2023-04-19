@@ -1,43 +1,77 @@
-name: Deploy to Google Cloud
+name: Deploy with Terraform
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+
+env:
+  TF_CLI_ARGS: "-input=false -no-color"
+  GCP_PROJECT_ID: my-project-id
+  GCP_REGION: europe-west1
+  FUNCTION_NAME: my-function-name
+  SCHEDULE: "0 10-22 * * 3"
+  TIMEZONE: "Europe/Paris"
+  TF_VAR_openai_key: ${{ secrets.OPENAI_KEY }}
+  TF_VAR_twitter_consumer_key: ${{ secrets.TWITTER_CONSUMER_KEY }}
+  TF_VAR_twitter_consumer_secret: ${{ secrets.TWITTER_CONSUMER_SECRET }}
+  TF_VAR_twitter_access_token_key: ${{ secrets.TWITTER_ACCESS_TOKEN_KEY }}
+  TF_VAR_twitter_access_token_secret: ${{ secrets.TWITTER_ACCESS_TOKEN_SECRET }}
+  GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v2
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v2.4.4
         with:
-          node-version: 16
+          node-version: "14.x"
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Build
         run: npm run build
 
-      - name: Create deployment ZIP
-        run: zip -r function.zip dist node_modules
-
-      - name: Authenticate with Google Cloud
-        uses: GoogleCloudPlatform/github-actions/setup-gcloud@master
+      - name: Archive
+        uses: actions/upload-artifact@v2
         with:
-          project_id: ${{ secrets.GCP_PROJECT_ID }}
-          service_account_email: ${{ secrets.GCP_SA_EMAIL }}
-          service_account_key: ${{ secrets.GCP_SA_KEY }}
+          name: code
+          path: build
 
-      - name: Deploy with Terraform
-        run: |
-          cd terraform
-          terraform init
-          terraform apply -auto-approve
-        env:
-          GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GCP_SA_KEY }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      - name: Download Terraform
+        uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_version: "1.0.6"
+
+      - name: Terraform Init
+        run: terraform init ${{ env.TF_CLI_ARGS }}
+
+      - name: Terraform Validate
+        run: terraform validate ${{ env.TF_CLI_ARGS }}
+
+      - name: Terraform Format
+        run: terraform fmt -check -diff ${{ env.TF_CLI_ARGS }}
+
+      - name: Terraform Plan
+        run: terraform plan ${{ env.TF_CLI_ARGS }}
+
+      - name: Terraform Apply
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: terraform apply ${{ env.TF_CLI_ARGS }} -auto-approve -var gcp_project_id=${{ env.GCP_PROJECT_ID }} -var gcp_region=${{ env.GCP_REGION }} -var function_name=${{ env.FUNCTION_NAME }} -var schedule="${{ env.SCHEDULE }}" -var timezone="${{ env.TIMEZONE }}" -var-file=../secrets.tfvars
+
+      - name: Terraform Destroy
+        if: github.ref == 'refs/heads/main' && github.event_name == 'delete'
+        run: terraform destroy ${{ env.TF_CLI_ARGS }} -auto-approve -var gcp_project_id=${{ env.GCP_PROJECT_ID }} -var gcp_region=${{ env.GCP_REGION }} -var function_name=${{ env.FUNCTION_NAME }} -var-file=../secrets.tfvars
+
+      - name: Cleanup
+        uses: actions/upload-artifact@v2
+        with:
+          name: tfstate
+          path: .terraform
+        if: always()
