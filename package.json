@@ -1,18 +1,28 @@
 {
-  "name": "boxoffice-tweeter-bot",
+  "name": "my-twitter-chatbot",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "My Twitter chatbot",
+  "main": "dist/index.js",
   "scripts": {
+    "start": "node dist/index.js",
+    "dev": "nodemon",
+    "build": "tsc",
+    "lint": "eslint . --ext .ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "twitter",
+    "chatbot"
+  ],
+  "author": "Arnaud Courtecuisse <arnaud.courtecuisse@lilo.org>",
+  "license": "MIT",
   "devDependencies": {
-    "@types/node": "^18.15.11",
-    "nodemon": "^2.0.22",
-    "ts-node": "^10.9.1",
-    "typescript": "^5.0.4"
+    "@types/node": "^17.0.13",
+    "eslint": "^8.2.0",
+    "nodemon": "^2.0.15",
+    "typescript": "^4.5.4"
+  },
+  "dependencies": {
+    "twitter-lite": "^2.4.0"
   }
 }

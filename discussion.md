@@ -1,6 +1,5 @@
 # Discussion that led to this repository
 
-
 > ❔ I want you to help me create a Tweeter chatbot.
 > I'll provide you detailed instructions to generate code,
 > then test it and ask you corrections along the way.
@@ -103,3 +102,57 @@ reload the script when changes are made.
 You should see "Hello, world!" logged to the console.
 
 Let me know if you have any questions or need further assistance!
+
+> ❔ The dev script is missing.
+> Can you show me the package.json with the necessary scripts?
+
+Sure, here's an updated package.json file with the necessary scripts:
+
+```json
+{
+  "name": "my-twitter-chatbot",
+  "version": "1.0.0",
+  "description": "My Twitter chatbot",
+  "main": "dist/index.js",
+  "scripts": {
+    "start": "node dist/index.js",
+    "dev": "nodemon",
+    "build": "tsc",
+    "lint": "eslint . --ext .ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "twitter",
+    "chatbot"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^17.0.13",
+    "eslint": "^8.2.0",
+    "nodemon": "^2.0.15",
+    "typescript": "^4.5.4"
+  },
+  "dependencies": {
+    "twitter-lite": "^2.4.0"
+  }
+}
+```
+
+Here are the scripts:
+
+* `start`: Runs the compiled TypeScript code in the dist directory.
+* `dev`: Runs the nodemon process for automatic reloading during development.
+* `build`: Compiles the TypeScript code to JavaScript in the dist directory.
+* `lint`: Lints the TypeScript code using ESLint.
+* `test`: Placeholder script for running tests.
+
+To run the dev script, you can simply run the following command
+in your project directory:
+
+```bash
+npm run dev
+```
+
+This will start the nodemon process and automatically reload your code
+when changes are made. Let me know if you have any questions!
