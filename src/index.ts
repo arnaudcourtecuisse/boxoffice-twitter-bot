@@ -1,9 +1,11 @@
-import { fetchBoxOfficeData } from "./allocine";
+import { Movie, fetchBoxOfficeData } from "./allocine";
 import { generateTweet } from "./openai";
 import { postTweet } from "./twitter";
 
-async function postBoxOfficeTweet() {
-  const movies = await fetchBoxOfficeData();
+function selectNewlyReleasedMovie(movies: Movie[]): {
+  movie: Movie;
+  isNew: boolean;
+} {
   const now = new Date();
   const newReleases = movies.filter((movie) => {
     const releaseDate = new Date(movie.releaseDate);
@@ -12,18 +14,36 @@ async function postBoxOfficeTweet() {
     );
     return daysSinceRelease === 0;
   });
-  newReleases.sort((a, b) => a.liveAdmissions.rank - b.liveAdmissions.rank);
-  if (newReleases.length === 0) {
-    console.log("No newly-released movies found.");
+  if (newReleases.length > 0) {
+    newReleases.sort((a, b) => a.liveAdmissions.rank - b.liveAdmissions.rank);
+    const movie = newReleases[0];
+    return { movie, isNew: true };
+  } else {
+    const bestRankedMovie = movies.sort(
+      (a, b) => a.liveAdmissions.rank - b.liveAdmissions.rank
+    )[0];
+    return { movie: bestRankedMovie, isNew: false };
+  }
+}
+
+function generateTweetPrompt(movie: Movie, isNew: boolean): string {
+  if (isNew) {
+    return `Generate a tweet about the new movie ${movie.title} which is ranked ${movie.liveAdmissions.rank} today. Don't forget to mention Boxoffice Live!`;
+  } else {
+    return `Generate a tweet about the movie ${movie.title} which is ranked ${movie.liveAdmissions.rank} today. Don't forget to mention Boxoffice Live!`;
+  }
+}
+
+export async function postBoxOfficeTweet() {
+  const { movie, isNew } = selectNewlyReleasedMovie(await fetchBoxOfficeData());
+
+  if (!movie) {
+    console.log("No new or best-ranked movies found.");
     return;
   }
-  const movie = newReleases[0];
-  const variation = movie.admissionsLastWeek
-    ? movie.liveAdmissions.admissions / movie.admissionsLastWeek.admissions - 1
-    : 1;
-  const prompt =
-    "Can you generate a tweet to promote the Boxoffice Live tool and mention that the movie " +
-    `${movie.title}" was just released and is currently ranked ${movie.liveAdmissions.rank} at the box office? #BoxofficeLive`;
+
+  const prompt = generateTweetPrompt(movie, isNew);
+
   const tweet = await generateTweet(prompt, process.env.OPENAI_API_KEY!);
   await postTweet(tweet, {
     consumer_key: process.env.TWITTER_CONSUMER_KEY!,
@@ -32,5 +52,3 @@ async function postBoxOfficeTweet() {
     access_token_secret: process.env.TWITTER_ACCESS_TOKEN_SECRET!,
   });
 }
-
-postBoxOfficeTweet();

@@ -7,7 +7,7 @@ interface AdmissionData {
   rank: number; // rank of the movie on that period
 }
 
-interface Movie {
+export interface Movie {
   title: string;
   releaseDate: string;
   // Admission data on the current day
