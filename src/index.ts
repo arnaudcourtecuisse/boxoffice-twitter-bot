@@ -3,17 +3,17 @@ import Twitter from "twitter-lite";
 
 async function postBoxOfficeTweet() {
   // Fetch live box office admission data from an API
-  const response1 = await fetch("https://api.allocine.fr/alqapibrest2/promo");
-  const data = await response1.json();
+  const response = await fetch("https://api.allocine.fr/alqapibrest2/promo");
+  const data = await response.json();
 
   // Choose a random movie from the top 10 movies
-  const movies = (data as any).feed.top10;
+  const movies = data.feed.top10;
   const movie = movies[Math.floor(Math.random() * movies.length)];
 
   // Generate a tweet using OpenAI API
-  const openaiApiKey = "YOUR_OPENAI_API_KEY";
+  const openaiApiKey = process.env.OPENAI_API_KEY;
   const prompt = `Le film ${movie.title} est ${movie.variation}% plus populaire aujourd'hui que la semaine dernière.`;
-  const response2 = await fetch(
+  const responseOpenAI = await fetch(
     "https://api.openai.com/v1/engines/davinci-codex/completions",
     {
       method: "POST",
@@ -30,16 +30,15 @@ async function postBoxOfficeTweet() {
       }),
     }
   );
-  const responseData = await response2.json();
-  const choices = (responseData as any).choices;
+  const { choices } = await responseOpenAI.json();
   const tweet = choices[0].text.trim();
 
   // Post the tweet to Twitter
   const twitterClient = new Twitter({
-    consumer_key: "YOUR_CONSUMER_KEY",
-    consumer_secret: "YOUR_CONSUMER_SECRET",
-    access_token_key: "YOUR_ACCESS_TOKEN_KEY",
-    access_token_secret: "YOUR_ACCESS_TOKEN_SECRET",
+    consumer_key: process.env.TWITTER_CONSUMER_KEY,
+    consumer_secret: process.env.TWITTER_CONSUMER_SECRET,
+    access_token_key: process.env.TWITTER_ACCESS_TOKEN_KEY,
+    access_token_secret: process.env.TWITTER_ACCESS_TOKEN_SECRET,
   });
   await twitterClient.post("statuses/update", { status: tweet });
 }
