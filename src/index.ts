@@ -6,17 +6,24 @@ interface Movie {
   variation: number;
 }
 
-async function postBoxOfficeTweet() {
-  // Fetch live box office admission data from an API
+interface OpenAIResponse {
+  choices: {
+    text: string;
+    index: number;
+    logprobs: null;
+    finish_reason: string;
+  }[];
+  created: number;
+  model: string;
+}
+
+async function fetchBoxOfficeData(): Promise<Movie[]> {
   const response = await fetch("https://api.allocine.fr/alqapibrest2/promo");
-  const data = (await response.json()) as { feed: { top10: Movie[] } };
+  const data = await response.json();
+  return data.feed.top10 as Movie[];
+}
 
-  // Choose a random movie from the top 10 movies
-  const movies = data.feed.top10;
-  const movie = movies[Math.floor(Math.random() * movies.length)];
-
-  // Generate a tweet using OpenAI API
-  const openaiApiKey = process.env.OPENAI_API_KEY as string;
+async function generateTweet(movie: Movie, apiKey: string): Promise<string> {
   const prompt = `Le film ${movie.title} est ${movie.variation}% plus populaire aujourd'hui que la semaine dernière.`;
   const responseOpenAI = await fetch(
     "https://api.openai.com/v1/engines/davinci-codex/completions",
@@ -24,7 +31,7 @@ async function postBoxOfficeTweet() {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${openaiApiKey}`,
+        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
         prompt,
@@ -35,17 +42,22 @@ async function postBoxOfficeTweet() {
       }),
     }
   );
-  const { choices } = (await responseOpenAI.json()) as {
-    choices: { text: string }[];
-  };
-  const tweet = choices[0].text.trim();
+  const { choices } = (await responseOpenAI.json()) as OpenAIResponse;
+  return choices[0].text.trim();
+}
 
-  // Post the tweet to Twitter
+async function postBoxOfficeTweet() {
+  const movies = await fetchBoxOfficeData();
+  const movie = movies[Math.floor(Math.random() * movies.length)];
+  const openaiApiKey = process.env.OPENAI_API_KEY;
+  const tweet = await generateTweet(movie, openaiApiKey);
   const twitterClient = new Twitter({
-    consumer_key: process.env.TWITTER_CONSUMER_KEY as string,
-    consumer_secret: process.env.TWITTER_CONSUMER_SECRET as string,
-    access_token_key: process.env.TWITTER_ACCESS_TOKEN_KEY as string,
-    access_token_secret: process.env.TWITTER_ACCESS_TOKEN_SECRET as string,
+    consumer_key: process.env.TWITTER_CONSUMER_KEY!,
+    consumer_secret: process.env.TWITTER_CONSUMER_SECRET!,
+    access_token_key: process.env.TWITTER_ACCESS_TOKEN_KEY!,
+    access_token_secret: process.env.TWITTER_ACCESS_TOKEN_SECRET!,
   });
   await twitterClient.post("statuses/update", { status: tweet });
 }
+
+postBoxOfficeTweet();
