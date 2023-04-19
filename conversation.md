@@ -1,4 +1,14 @@
-# Discussion that led to this repository
+# Conversation that led to this repository
+
+## Read this file
+
+> ❔ This is a prompt I submited
+
+This would be ChatGPT's response
+
+> ⚠️ This is a note for your guidance, but was not prompted to ChatGPT
+
+## Conversation
 
 > ❔ I want you to help me create a Tweeter chatbot.
 > I'll provide you detailed instructions to generate code,
@@ -437,6 +447,9 @@ This should prevent the conflict between the type declarations.
 
 Try running the build script again after making these changes and
 let me know if you encounter any further issues.
+
+> ⚠️ Here I noticed that ChatGPT removed some options in the TS config,
+> so I had to restore them in order to fix the build.
 
 > ❔ It did not fix it. The fix was to restore the `skipLibCheck` option.
 > Now my `tsconfig.json` looks like this and the build works:
@@ -1188,3 +1201,140 @@ to only include those that were released on the current day.
 We then sort those movies by their current rank in the box office
 and select the best-ranked one (i.e., the one with the lowest rank).
 This ensures that we tweet about the most popular newly-released movie.
+
+> Please split this `src/index.ts` file in several modules:
+>
+> ```typescript
+> // content of index.ts
+> ```
+
+Certainly! Here's one way you could split the `src/index.ts` file
+into multiple modules:
+
+```typescript
+// src/allocine.ts
+
+import fetch from "node-fetch";
+
+interface AdmissionData {
+  admissions: number; // number of tickets sold for the movie on a given period
+  rank: number; // rank of the movie on that period
+}
+
+interface Movie {
+  title: string;
+  releaseDate: string;
+  // Admission data on the current day
+  liveAdmissions: AdmissionData;
+  // Admission data on the same day of the previous week, if it was already released
+  admissionsLastWeek: AdmissionData | null;
+}
+
+interface MovieFeed {
+  feed: {
+    top10: Movie[];
+  };
+}
+
+export async function fetchBoxOfficeData(): Promise<Movie[]> {
+  const response = await fetch("https://api.allocine.fr/alqapibrest2/promo");
+  const data = (await response.json()) as MovieFeed;
+  return data.feed.top10;
+}
+```
+
+```typescript
+// src/openai.ts
+
+import fetch from "node-fetch";
+
+interface OpenAIResponse {
+  choices: {
+    text: string;
+    index: number;
+    logprobs: null;
+    finish_reason: string;
+  }[];
+  created: number;
+  model: string;
+}
+
+export async function generateTweet(
+  prompt: string,
+  apiKey: string
+): Promise<string> {
+  const responseOpenAI = await fetch(
+    "https://api.openai.com/v1/engines/davinci-codex/completions",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        prompt,
+        max_tokens: 50,
+        temperature: 0.5,
+        n: 1,
+        stop: ".",
+      }),
+    }
+  );
+  const { choices } = (await responseOpenAI.json()) as OpenAIResponse;
+  return choices[0].text.trim();
+}
+```
+
+```typescript
+// src/twitter.ts
+
+import Twitter from "twitter-lite";
+
+export async function postTweet(tweet: string, twitterConfig: any) {
+  const twitterClient = new Twitter(twitterConfig);
+  await twitterClient.post("statuses/update", { status: tweet });
+}
+```
+
+```typescript
+// src/index.ts
+
+import { fetchBoxOfficeData } from "./allocine";
+import { generateTweet } from "./openai";
+import { postTweet } from "./twitter";
+
+async function postBoxOfficeTweet() {
+  const movies = await fetchBoxOfficeData();
+  const now = new Date();
+  const newReleases = movies.filter((movie) => {
+    const releaseDate = new Date(movie.releaseDate);
+    const daysSinceRelease = Math.floor(
+      (now.getTime() - releaseDate.getTime()) / (1000 * 3600 * 24)
+    );
+    return daysSinceRelease === 0;
+  });
+  newReleases.sort((a, b) => a.liveAdmissions.rank - b.liveAdmissions.rank);
+  if (newReleases.length === 0) {
+    console.log("No newly-released movies found.");
+    return;
+  }
+  const movie = newReleases[0];
+  const variation = movie.admissionsLastWeek
+    ? movie.liveAdmissions.admissions / movie.admissionsLastWeek.admissions - 1
+    : 1;
+  const prompt = `Le film ${movie.title} est ${variation}% plus populaire aujourd'hui que la semaine dernière.`;
+  const tweet = await generateTweet(prompt, process.env.OPENAI_API_KEY!);
+  await postTweet(tweet, {
+    consumer_key: process.env.TWITTER_CONSUMER_KEY!,
+    consumer_secret: process.env.TWITTER_CONSUMER_SECRET!,
+    access_token_key: process.env.TWITTER_ACCESS_TOKEN_KEY!,
+    access_token_secret: process.env.TWITTER_ACCESS_TOKEN_SECRET!,
+  });
+}
+
+postBoxOfficeTweet();
+```
+
+> ⚠️ In fact, I hit ChatGPT's reponse size limit,
+> so I had to work around it to get the full files.
+> In the end, I had to give him back the several files it split `index.ts` into.
