@@ -7,6 +7,7 @@ interface AdmissionData {
 }
 interface Movie {
   title: string;
+  releaseDate: string;
   // Admission data on the current day
   liveAdmissions: AdmissionData;
   // Admission data on the same day of the previous week, if it was already released
@@ -64,7 +65,20 @@ async function generateTweet(movie: Movie, apiKey: string): Promise<string> {
 
 async function postBoxOfficeTweet() {
   const movies = await fetchBoxOfficeData();
-  const movie = movies[Math.floor(Math.random() * movies.length)];
+  const now = new Date();
+  const newReleases = movies.filter((movie) => {
+    const releaseDate = new Date(movie.releaseDate);
+    const daysSinceRelease = Math.floor(
+      (now.getTime() - releaseDate.getTime()) / (1000 * 3600 * 24)
+    );
+    return daysSinceRelease === 0;
+  });
+  newReleases.sort((a, b) => a.liveAdmissions.rank - b.liveAdmissions.rank);
+  if (newReleases.length === 0) {
+    console.log("No newly-released movies found.");
+    return;
+  }
+  const movie = newReleases[0];
   const tweet = await generateTweet(movie, process.env.OPENAI_API_KEY!);
   const twitterClient = new Twitter({
     consumer_key: process.env.TWITTER_CONSUMER_KEY!,
