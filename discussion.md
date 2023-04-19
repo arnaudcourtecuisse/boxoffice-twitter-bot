@@ -88,6 +88,7 @@ Finally, initialize a new git repository in your project directory:
 ```bash
 git init
 ```
+
 You're now ready to start building your Twitter chatbot!
 You can run the script by running the following command
 in your project directory:
@@ -156,3 +157,69 @@ npm run dev
 
 This will start the nodemon process and automatically reload your code
 when changes are made. Let me know if you have any questions!
+
+
+> ❔ Ok, now it works. Now let's work on the bot implementation.
+> It should post tweets about live boxoffice admissions in France.
+> It fetches admission data from an API,
+> then uses OpenAI API to generate a tweet in French,
+> and finally posts the tweet.
+> Can you update the Typescript function to do that?
+
+Sure, here's an updated TypeScript function that fetches live box office
+admission data for movies in France, generates a tweet using OpenAI API,
+and posts the tweet to Twitter:
+
+```typescript
+import Twitter from "twitter-lite";
+import fetch from "node-fetch";
+
+async function postBoxOfficeTweet() {
+  // Fetch live box office admission data from an API
+  const response = await fetch("https://api.allocine.fr/alqapibrest2/promo");
+  const data = await response.json();
+
+  // Choose a random movie from the top 10 movies
+  const movies = data.feed.top10;
+  const movie = movies[Math.floor(Math.random() * movies.length)];
+
+  // Generate a tweet using OpenAI API
+  const openaiApiKey = "YOUR_OPENAI_API_KEY";
+  const prompt = `Le film ${movie.title} est ${movie.variation}% plus populaire aujourd'hui que la semaine dernière.`;
+  const response = await fetch("https://api.openai.com/v1/engines/davinci-codex/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${openaiApiKey}`,
+    },
+    body: JSON.stringify({
+      prompt,
+      max_tokens: 50,
+      temperature: 0.5,
+      n: 1,
+      stop: "."
+    })
+  });
+  const { choices } = await response.json();
+  const tweet = choices[0].text.trim();
+
+  // Post the tweet to Twitter
+  const twitterClient = new Twitter({
+    consumer_key: "YOUR_CONSUMER_KEY",
+    consumer_secret: "YOUR_CONSUMER_SECRET",
+    access_token_key: "YOUR_ACCESS_TOKEN_KEY",
+    access_token_secret: "YOUR_ACCESS_TOKEN_SECRET",
+  });
+  await twitterClient.post("statuses/update", { status: tweet });
+}
+```
+
+Here's a brief explanation of how the function works:
+
+The function uses the node-fetch package to fetch live box office admission data from the Allocine API.
+It chooses a random movie from the top 10 movies returned by the API.
+It then generates a tweet using the OpenAI Codex API. The prompt for the API is a string that includes the movie title and its popularity variation. The API returns a completed tweet based on the prompt.
+Finally, the function uses the twitter-lite package to post the generated tweet to Twitter.
+Note that you'll need to replace the placeholders for the OpenAI API key and Twitter API keys with your own keys.
+
+Let me know if you have any questions or need further assistance!
