@@ -1,9 +1,16 @@
 import fetch from "node-fetch";
 import Twitter from "twitter-lite";
 
+interface AdmissionData {
+  admissions: number; // number of tickets sold for the movie on a given period
+  rank: number; // rank of the movie on that period
+}
 interface Movie {
   title: string;
-  variation: number;
+  // Admission data on the current day
+  liveAdmissions: AdmissionData;
+  // Admission data on the same day of the previous week, if it was already released
+  admissionsLastWeek: AdmissionData | null;
 }
 
 interface MovieFeed {
@@ -11,6 +18,7 @@ interface MovieFeed {
     top10: Movie[];
   };
 }
+
 interface OpenAIResponse {
   choices: {
     text: string;
@@ -29,7 +37,10 @@ async function fetchBoxOfficeData(): Promise<Movie[]> {
 }
 
 async function generateTweet(movie: Movie, apiKey: string): Promise<string> {
-  const prompt = `Le film ${movie.title} est ${movie.variation}% plus populaire aujourd'hui que la semaine dernière.`;
+  const variation = movie.admissionsLastWeek
+    ? movie.liveAdmissions.admissions / movie.admissionsLastWeek.admissions - 1
+    : 1;
+  const prompt = `Le film ${movie.title} est ${variation}% plus populaire aujourd'hui que la semaine dernière.`;
   const responseOpenAI = await fetch(
     "https://api.openai.com/v1/engines/davinci-codex/completions",
     {
