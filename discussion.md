@@ -223,3 +223,21 @@ Finally, the function uses the twitter-lite package to post the generated tweet 
 Note that you'll need to replace the placeholders for the OpenAI API key and Twitter API keys with your own keys.
 
 Let me know if you have any questions or need further assistance!
+
+> ❔ twitter-lite and node-fetch dependencies are invalid or missing.
+> What should I do to install them?
+
+You can install the `twitter-lite` and `node-fetch` packages using npm
+by running the following command in your project directory:
+
+```bash
+npm install twitter-lite node-fetch
+```
+
+This will install both packages and update your `package.json` file
+with the new dependencies.
+
+After running this command, you should be able to import the packages
+in your TypeScript code without any issues.
+
+Let me know if you have any questions!

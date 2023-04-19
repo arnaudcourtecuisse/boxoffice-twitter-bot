@@ -23,6 +23,7 @@
     "typescript": "^4.5.4"
   },
   "dependencies": {
-    "twitter-lite": "^2.4.0"
+    "node-fetch": "^3.3.1",
+    "twitter-lite": "^1.1.0"
   }
 }
