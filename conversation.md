@@ -450,7 +450,7 @@ let me know if you encounter any further issues.
 
 > ⚠️ Here I noticed that ChatGPT removed some options in the TS config,
 > so I had to restore them in order to fix the build.
-
+>
 > ❔ It did not fix it. The fix was to restore the `skipLibCheck` option.
 > Now my `tsconfig.json` looks like this and the build works:
 >
@@ -1202,7 +1202,7 @@ We then sort those movies by their current rank in the box office
 and select the best-ranked one (i.e., the one with the lowest rank).
 This ensures that we tweet about the most popular newly-released movie.
 
-> Please split this `src/index.ts` file in several modules:
+> ❔ Please split this `src/index.ts` file in several modules:
 >
 > ```typescript
 > // content of index.ts
@@ -1338,3 +1338,100 @@ postBoxOfficeTweet();
 > ⚠️ In fact, I hit ChatGPT's reponse size limit,
 > so I had to work around it to get the full files.
 > In the end, I had to give him back the several files it split `index.ts` into.
+>
+> ❔ Ok, I can see you are confused. Let's recap where we are. We have 4 files:
+>
+> ```typescript
+> // src/allocine.ts
+> // ...
+> ```
+>
+> ```typescript
+> // src/openai.ts
+> // ...
+> ```
+>
+> ```typescript
+> // src/twitter.ts
+> // ...
+> ```
+>
+> ```typescript
+> // src/index.ts
+> // ...
+> ```
+>
+> From now on, we work only with this 4 Typescript files.
+> Can you update the prompt used in tweet generation,
+> so that it asks OpenAI to generate a tweet?
+
+Sure! Here's an updated version of src/index.ts that prompts OpenAI
+to generate the tweet:
+
+```typescript
+import { fetchBoxOfficeData } from "./allocine";
+import { generateTweet } from "./openai";
+import { postTweet } from "./twitter";
+
+async function postBoxOfficeTweet() {
+  const movies = await fetchBoxOfficeData();
+  const now = new Date();
+  const newReleases = movies.filter((movie) => {
+    const releaseDate = new Date(movie.releaseDate);
+    const daysSinceRelease = Math.floor(
+      (now.getTime() - releaseDate.getTime()) / (1000 * 3600 * 24)
+    );
+    return daysSinceRelease === 0;
+  });
+  newReleases.sort((a, b) => a.liveAdmissions.rank - b.liveAdmissions.rank);
+  if (newReleases.length === 0) {
+    console.log("No newly-released movies found.");
+    return;
+  }
+  const movie = newReleases[0];
+  const variation = movie.admissionsLastWeek
+    ? movie.liveAdmissions.admissions / movie.admissionsLastWeek.admissions - 1
+    : 1;
+  const prompt = `Le film ${movie.title} est ${variation}% plus populaire aujourd'hui que la semaine dernière. Qu'est-ce que vous pensez de cela?`;
+  const tweet = await generateTweet(prompt, process.env.OPENAI_API_KEY!);
+  await postTweet(tweet, {
+    consumer_key: process.env.TWITTER_CONSUMER_KEY!,
+    consumer_secret: process.env.TWITTER_CONSUMER_SECRET!,
+    access_token_key: process.env.TWITTER_ACCESS_TOKEN_KEY!,
+    access_token_secret: process.env.TWITTER_ACCESS_TOKEN_SECRET!,
+  });
+}
+
+postBoxOfficeTweet();
+```
+
+Note that I added the question "Qu'est-ce que vous pensez de cela?"
+to the prompt to ask the user for their opinion on the popularity of the movie.
+
+> ❔ Since the movie has just been released, it has no variation.
+> Could the prompt focus on the movie's rank rather than its variation?
+
+
+Sure, you can update the prompt to focus on the movie's rank.
+Here's an updated version of the prompt that you can use:
+
+```plain
+Le film ${movie.title} est en ${movie.liveAdmissions.rank}ème position aujourd'hui au box-office.
+```
+
+> ❔ I think you can do better. Here's some guidance for the prompt:
+>
+> * the prompt should provide instructions to generate a tweet
+> * the tweet should relate to the ranking of the selected newly-released movie.
+> * the tweet should promote "Boxoffice Live", a tool that provides real-time admission data.
+
+Understood. Here's an updated prompt that takes your guidance into account:
+
+```typescript
+"Can you generate a tweet to promote the Boxoffice Live tool and mention that the movie " +
+`${movie.title}" was just released and is currently ranked ${movie.liveAdmissions.rank} at the box office? #BoxofficeLive`
+```
+
+This prompt should ask OpenAI to generate a tweet that promotes Boxoffice Live
+and mentions the newly-released movie's current ranking at the box office.
+It also includes a hashtag to promote the tool further.

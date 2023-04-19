@@ -1,5 +1,3 @@
-// src/index.ts
-
 import { fetchBoxOfficeData } from "./allocine";
 import { generateTweet } from "./openai";
 import { postTweet } from "./twitter";
@@ -23,7 +21,9 @@ async function postBoxOfficeTweet() {
   const variation = movie.admissionsLastWeek
     ? movie.liveAdmissions.admissions / movie.admissionsLastWeek.admissions - 1
     : 1;
-  const prompt = `Le film ${movie.title} est ${variation}% plus populaire aujourd'hui que la semaine dernière.`;
+  const prompt =
+    "Can you generate a tweet to promote the Boxoffice Live tool and mention that the movie " +
+    `${movie.title}" was just released and is currently ranked ${movie.liveAdmissions.rank} at the box office? #BoxofficeLive`;
   const tweet = await generateTweet(prompt, process.env.OPENAI_API_KEY!);
   await postTweet(tweet, {
     consumer_key: process.env.TWITTER_CONSUMER_KEY!,
